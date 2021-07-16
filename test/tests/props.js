@@ -4,7 +4,8 @@
 import { wrapPromise, noop, parseQuery, destroyElement } from 'belter/src';
 import { ZalgoPromise } from 'zalgo-promise/src';
 
-import { onWindowOpen } from '../common';
+import { onWindowOpen, getBody } from '../common';
+import { zoid } from '../zoid';
 
 describe('zoid props cases', () => {
 
@@ -12,7 +13,7 @@ describe('zoid props cases', () => {
         return wrapPromise(({ expect }) => {
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-update-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com'
@@ -38,7 +39,7 @@ describe('zoid props cases', () => {
                 }
             });
             
-            return instance.render(document.body);
+            return instance.render(getBody());
         });
     });
 
@@ -46,7 +47,7 @@ describe('zoid props cases', () => {
         return wrapPromise(({ expect }) => {
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-update-different-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com'
@@ -74,7 +75,7 @@ describe('zoid props cases', () => {
                 }
             });
             
-            return instance.render(document.body);
+            return instance.render(getBody());
         });
     });
 
@@ -82,7 +83,7 @@ describe('zoid props cases', () => {
         return wrapPromise(({ expect }) => {
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-update-decorated-different-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com',
@@ -126,7 +127,7 @@ describe('zoid props cases', () => {
                 }
             });
             
-            return instance.render(document.body);
+            return instance.render(getBody());
         });
     });
 
@@ -134,7 +135,7 @@ describe('zoid props cases', () => {
         return wrapPromise(({ expect, error }) => {
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-update-default-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com',
@@ -171,7 +172,7 @@ describe('zoid props cases', () => {
             let doExpect = false;
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-update-value-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com',
@@ -203,7 +204,7 @@ describe('zoid props cases', () => {
                 }
             });
             
-            return instance.render(document.body);
+            return instance.render(getBody());
         });
     });
 
@@ -212,7 +213,7 @@ describe('zoid props cases', () => {
             const expectedResult = 'bar';
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-string-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com'
@@ -233,7 +234,7 @@ describe('zoid props cases', () => {
                 run: () => `
                     window.xprops.foo(window.xprops.customProp);
                 `
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -242,7 +243,7 @@ describe('zoid props cases', () => {
             const expectedResult = 123;
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-number-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com'
@@ -263,7 +264,7 @@ describe('zoid props cases', () => {
                 run: () => `
                     window.xprops.foo(window.xprops.customProp);
                 `
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -272,7 +273,7 @@ describe('zoid props cases', () => {
             const expectedResult = true;
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-boolean-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com'
@@ -293,7 +294,7 @@ describe('zoid props cases', () => {
                 run: () => `
                     window.xprops.foo(window.xprops.customProp);
                 `
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -310,7 +311,7 @@ describe('zoid props cases', () => {
             ];
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-array-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com'
@@ -345,7 +346,7 @@ describe('zoid props cases', () => {
                 run: () => `
                     window.xprops.foo(window.xprops.objectProp);
                 `
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -362,7 +363,7 @@ describe('zoid props cases', () => {
             };
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-object-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com'
@@ -397,7 +398,7 @@ describe('zoid props cases', () => {
                 run: () => `
                     window.xprops.foo(window.xprops.objectProp);
                 `
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -405,7 +406,7 @@ describe('zoid props cases', () => {
         return wrapPromise(({ expect }) => {
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-function-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com'
@@ -427,7 +428,7 @@ describe('zoid props cases', () => {
                 run: () => `
                     window.xprops.foo(window.xprops.functionProp);
                 `
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -435,7 +436,7 @@ describe('zoid props cases', () => {
         return wrapPromise(({ expect }) => {
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-required-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com',
@@ -459,7 +460,7 @@ describe('zoid props cases', () => {
         return wrapPromise(({ expect }) => {
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-samedomain-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com',
@@ -485,7 +486,7 @@ describe('zoid props cases', () => {
                 `
             });
             
-            return instance.render(document.body);
+            return instance.render(getBody());
         });
     });
 
@@ -493,7 +494,7 @@ describe('zoid props cases', () => {
         return wrapPromise(({ expect }) => {
 
             window.__component__ = (sameDomain = true) => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-samedomain-prop-passed',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com',
@@ -519,7 +520,7 @@ describe('zoid props cases', () => {
                 `
             });
             
-            return instance.render(document.body);
+            return instance.render(getBody());
         });
     });
 
@@ -527,7 +528,7 @@ describe('zoid props cases', () => {
         return wrapPromise(({ expect }) => {
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-alias-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com',
@@ -548,7 +549,7 @@ describe('zoid props cases', () => {
                 `
             });
             
-            return instance.render(document.body);
+            return instance.render(getBody());
         });
     });
 
@@ -556,7 +557,7 @@ describe('zoid props cases', () => {
         return wrapPromise(({ expect }) => {
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-alias-reverse-prop',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com',
@@ -577,7 +578,7 @@ describe('zoid props cases', () => {
                 `
             });
             
-            return instance.render(document.body);
+            return instance.render(getBody());
         });
     });
 
@@ -585,7 +586,7 @@ describe('zoid props cases', () => {
         return wrapPromise(({ expect }) => {
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-props-query-param',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com',
@@ -604,6 +605,7 @@ describe('zoid props cases', () => {
                             type:       'object',
                             queryParam: () => 'myBazProp',
                             queryValue: (val) => {
+                                // $FlowFixMe
                                 return {
                                     ...val,
                                     meep: 'beep'
@@ -677,7 +679,55 @@ describe('zoid props cases', () => {
                 `
             });
             
-            return instance.render(document.body);
+            return instance.render(getBody());
+        });
+    });
+
+    it('should pass boolean props in the url correctly', () => {
+        return wrapPromise(({ expect }) => {
+
+            window.__component__ = () => {
+                return zoid.create({
+                    tag:    'test-props-boolean-query-param',
+                    url:    'mock://www.child.com/base/test/windows/child/index.htm',
+                    domain: 'mock://www.child.com',
+                    props:  {
+                        trueProp: {
+                            type:       'boolean',
+                            queryParam: true
+                        },
+
+                        falseProp: {
+                            type:       'boolean',
+                            queryParam: true
+                        }
+                    }
+                });
+            };
+
+            const component = window.__component__();
+            const instance = component({
+                trueProp:   true,
+                falseProp:  false,
+
+                getQuery: expect('getQuery', rawQuery => {
+                    const query = JSON.stringify(parseQuery(rawQuery), null, 4);
+
+                    const expected = JSON.stringify({
+                        'trueProp':                'true',
+                        'falseProp':               'false'
+                    }, null, 4);
+
+                    if (query !== expected) {
+                        throw new Error(`Expected query string to be:\n\n${ expected }\n\nbut got:\n\n${ query }`);
+                    }
+                }),
+                run: () => `
+                    window.xprops.getQuery(window.location.search.slice(1));
+                `
+            });
+
+            return instance.render(getBody());
         });
     });
 
@@ -687,7 +737,7 @@ describe('zoid props cases', () => {
             const promiseValue = 'helloworld';
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-promise-props-query-param',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com',
@@ -695,7 +745,7 @@ describe('zoid props cases', () => {
                         promiseProp: {
                             type:       'function',
                             queryParam: true,
-                            queryValue: ({ value }) => {
+                            queryValue: <T>({ value } : {| value : () => T |}) : ZalgoPromise<T> => {
                                 return ZalgoPromise.delay(50).then(() => value());
                             }
                         }
@@ -722,7 +772,7 @@ describe('zoid props cases', () => {
                 `
             });
             
-            return instance.render(document.body);
+            return instance.render(getBody());
         });
     });
 
@@ -730,7 +780,7 @@ describe('zoid props cases', () => {
         return wrapPromise(({ expect }) => {
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-update-prop-destroy-component',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com'
@@ -740,7 +790,7 @@ describe('zoid props cases', () => {
             const component = window.__component__();
             const instance = component();
 
-            instance.render(document.body).then(expect('postRender', () => {
+            instance.render(getBody()).then(expect('postRender', () => {
                 const updatePromise = instance.updateProps({
                     foo: 'bar'
                 });
@@ -756,7 +806,7 @@ describe('zoid props cases', () => {
         return wrapPromise(({ expect }) => {
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-update-prop-close-window',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com'
@@ -772,7 +822,7 @@ describe('zoid props cases', () => {
                 openedWindow = win;
             }));
 
-            instance.render(document.body).then(expect('postRender', () => {
+            instance.render(getBody()).then(expect('postRender', () => {
                 const updatePromise = instance.updateProps({
                     foo: 'bar'
                 });
@@ -788,7 +838,7 @@ describe('zoid props cases', () => {
         return wrapPromise(({ expect }) => {
 
             window.__component__ = () => {
-                return window.zoid.create({
+                return zoid.create({
                     tag:    'test-update-prop-delay',
                     url:    'mock://www.child.com/base/test/windows/child/index.htm',
                     domain: 'mock://www.child.com'
@@ -814,7 +864,7 @@ describe('zoid props cases', () => {
                 }
             });
             
-            return instance.render(document.body);
+            return instance.render(getBody());
         });
     });
 

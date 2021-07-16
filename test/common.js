@@ -44,11 +44,11 @@ export function monkeyPatchFunction<T, A>(obj : Object, name : string, handler :
     };
 }
 
-export function onWindowOpen({ win = window, doc = win.document, time = 500 } : {| win? : SameDomainWindowType, doc? : HTMLElement, time? : number |} = {}) : ZalgoPromise<SameDomainWindowType> {
+export function onWindowOpen({ win = window, doc = win.document, time = 500 } : {| win? : SameDomainWindowType, doc? : HTMLElement, time? : number |} = {}) : ZalgoPromise<{| win : SameDomainWindowType, iframe : ?{| element : HTMLIFrameElement |}, popup : ?{| args : [ string, string, string ] |} |}> {
     return new ZalgoPromise((resolve, reject) => {
         const winOpenMonkeyPatch = monkeyPatchFunction(win, 'open', ({ call, args }) => {
             const popup = call();
-            resolve({ win: popup, popup: { args } });
+            resolve({ win: popup, popup: { args }, iframe: null });
             winOpenMonkeyPatch.cancel();
         });
 
@@ -67,9 +67,9 @@ export function onWindowOpen({ win = window, doc = win.document, time = 500 } : 
                 };
 
                 const check = () => {
-                    if (el.contentWindow) {
+                    if (el.contentWindow && el.name.match(/^__zoid_/)) {
                         cleanup();
-                        resolve({ win: el.contentWindow, iframe: { element: el } });
+                        resolve({ win: el.contentWindow, iframe: { element: el }, popup: null });
                     }
                 };
 
@@ -85,13 +85,13 @@ export function onWindowOpen({ win = window, doc = win.document, time = 500 } : 
             }
         });
 
-    }).then(({ win: openedWindow, ...rest }) => {
+    }).then(({ win: openedWindow, iframe, popup }) => {
 
         if (!openedWindow || isWindowClosed(openedWindow)) {
             throw new Error(`Expected win to be open`);
         }
 
-        return { win: openedWindow, ...rest };
+        return { win: openedWindow, iframe, popup };
     });
 }
 
@@ -164,7 +164,7 @@ export function runOnClick<T>(handler : () => T) : T {
     }
 }
 
-export function getContainer({ parent, shadow = false, slots = false } : {| parent? : ?HTMLElement, shadow? : boolean, slots? : boolean |} = {}) : {| container : HTMLElement, destroy : () => void |} {
+export function getContainer({ parent, shadow = false, slots = false, nested = false } : {| parent? : ?HTMLElement, shadow? : boolean, slots? : boolean, nested? : boolean |} = {}) : {| container : HTMLElement, destroy : () => void |} {
     const parentContainer = parent = parent || document.body;
     
     if (!parentContainer) {
@@ -183,6 +183,7 @@ export function getContainer({ parent, shadow = false, slots = false } : {| pare
 
     const customElementName = `zoid-custom-element-${ uniqueID() }`;
     const customSlotName = `zoid-custom-slot-${ uniqueID() }`;
+    const innerWrapperName = `zoid-inner-wrapper-${ uniqueID() }`;
     
     const shadowContainer = document.createElement(slots ? 'slot' : 'div');
     shadowContainer.setAttribute('name', customSlotName);
@@ -201,8 +202,40 @@ export function getContainer({ parent, shadow = false, slots = false } : {| pare
         }
     });
 
+    customElements.define(innerWrapperName, class extends HTMLElement {
+        connectedCallback() {
+            const shadowRoot = this.attachShadow({ mode: 'open' });
+            shadowRoot.appendChild(shadowContainer);
+        }
+    });
+
     const customElement = document.createElement(customElementName);
     parentContainer.appendChild(customElement);
+
+    if (nested) {
+        const innerWrapper = document.createElement(innerWrapperName);
+
+        const customElementShadowRoot = customElement.shadowRoot;
+
+        if (customElementShadowRoot) {
+            customElementShadowRoot.appendChild(innerWrapper);
+        }
+
+        const innerWrapperShadowRoot = innerWrapper.shadowRoot;
+        const innerWrapperContainer = document.createElement('div');
+
+        if (innerWrapperShadowRoot) {
+            innerWrapperShadowRoot.appendChild(innerWrapperContainer);
+        }
+
+        return {
+            container: innerWrapperContainer,
+            destroy:   () => {
+                parentContainer.removeChild(customElement);
+            }
+        };
+    }
+
 
     if (!slots) {
         return {
@@ -222,4 +255,13 @@ export function getContainer({ parent, shadow = false, slots = false } : {| pare
             parentContainer.removeChild(customElement);
         }
     };
+
+}
+
+export function getBody(win? : SameDomainWindowType = window) : HTMLBodyElement {
+    if (!win.document.body) {
+        throw new Error(`Window has no body`);
+    }
+
+    return win.document.body;
 }

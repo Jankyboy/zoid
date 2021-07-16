@@ -8,7 +8,7 @@ import { isSameDomain, matchDomain, getDomainFromUrl, isBlankDomain,
 import { ZalgoPromise } from 'zalgo-promise/src';
 import { addEventListener, uniqueID, elementReady, writeElementToWindow, eventEmitter, type EventEmitterType,
     noop, onResize, extendUrl, appendChild, cleanup, base64encode, isRegex,
-    once, stringifyError, destroyElement, getElementSafe, showElement, hideElement, iframe,
+    once, stringifyError, destroyElement, getElementSafe, showElement, hideElement, iframe, memoize, isElementClosed,
     awaitFrameWindow, popup, normalizeDimension, watchElementForClose, isShadowElement, insertShadowSlot } from 'belter/src';
 
 import { ZOID, POST_MESSAGE, CONTEXT, EVENT,
@@ -23,7 +23,7 @@ import { propsToQuery, extendProps } from './props';
 
 export type RenderOptionsType<P> = {|
     uid : string,
-    props : PropsInputType<P>,
+    props : PropsType<P>,
     tag : string,
     context : $Values<typeof CONTEXT>,
     close : (?string) => ZalgoPromise<void>,
@@ -37,14 +37,15 @@ export type RenderOptionsType<P> = {|
     prerenderFrame : ?HTMLIFrameElement
 |};
 
-export type ParentExportsType<P> = {|
+export type ParentExportsType<P, X> = {|
     init : (ChildExportsType<P>) => ZalgoPromise<void>,
     close : () => ZalgoPromise<void>,
     checkClose : CrossDomainFunctionType<[], boolean>,
     resize : CrossDomainFunctionType<[{| width? : ?number, height? : ?number |}], void>,
     onError : (mixed) => ZalgoPromise<void>,
     show : () => ZalgoPromise<void>,
-    hide : () => ZalgoPromise<void>
+    hide : () => ZalgoPromise<void>,
+    export : (X) => ZalgoPromise<void>
 |};
 
 export type PropRef =
@@ -90,12 +91,24 @@ type InternalState = {|
     visible : boolean
 |};
 
+type Rerender = () => ZalgoPromise<void>;
+
+type RenderContainerOptions = {|
+    context : $Values<typeof CONTEXT>,
+    uid : string,
+    proxyFrame : ?ProxyObject<HTMLIFrameElement>,
+    proxyPrerenderFrame : ?ProxyObject<HTMLIFrameElement>,
+    rerender : Rerender
+|};
+
+type ResolveInitPromise = () => ZalgoPromise<void>;
+type RejectInitPromise = (mixed) => ZalgoPromise<void>;
 type GetProxyContainer = (container : string | HTMLElement) => ZalgoPromise<ProxyObject<HTMLElement>>;
 type Show = () => ZalgoPromise<void>;
 type Hide = () => ZalgoPromise<void>;
 type Close = () => ZalgoPromise<void>;
 type OnError = (mixed) => ZalgoPromise<void>;
-type RenderContainer = (proxyContainer : ProxyObject<HTMLElement>, {| context : $Values<typeof CONTEXT>, uid : string, proxyFrame : ?ProxyObject<HTMLIFrameElement>, proxyPrerenderFrame : ?ProxyObject<HTMLIFrameElement> |}) => ZalgoPromise<?ProxyObject<HTMLElement>>;
+type RenderContainer = (proxyContainer : ProxyObject<HTMLElement>, RenderContainerOptions) => ZalgoPromise<?ProxyObject<HTMLElement>>;
 type SetProxyWin = (ProxyWindow) => ZalgoPromise<void>;
 type GetProxyWindow = () => ZalgoPromise<ProxyWindow>;
 type OpenFrame = (context : $Values<typeof CONTEXT>, {| windowName : string |}) => ZalgoPromise<?ProxyObject<HTMLIFrameElement>>;
@@ -125,7 +138,9 @@ type ParentDelegateOverrides<P> = {|
     openPrerender : OpenPrerender,
     watchForUnload : WatchForUnload,
     getInternalState : GetInternalState,
-    setInternalState : SetInternalState
+    setInternalState : SetInternalState,
+    resolveInitPromise : ResolveInitPromise,
+    rejectInitPromise : RejectInitPromise
 |};
 
 type DelegateOverrides = {|
@@ -143,13 +158,21 @@ type DelegateOverrides = {|
     watchForUnload : WatchForUnload
 |};
 
-type ParentComponent<P> = {|
+type RenderOptions = {|
+    target : CrossDomainWindowType,
+    container : string | HTMLElement,
+    context : $Values<typeof CONTEXT>,
+    rerender : Rerender
+|};
+
+type ParentComponent<P, X> = {|
     init : () => void,
-    render : (CrossDomainWindowType, string | HTMLElement, $Values<typeof CONTEXT>) => ZalgoPromise<void>,
+    render : (RenderOptions) => ZalgoPromise<void>,
     setProps : (newProps : PropsInputType<P>, isUpdate? : boolean) => void,
     destroy : (err? : mixed) => ZalgoPromise<void>,
     getHelpers : () => ParentHelpers<P>,
-    getDelegateOverrides : () => ZalgoPromise<DelegateOverrides>
+    getDelegateOverrides : () => ZalgoPromise<DelegateOverrides>,
+    getExports : () => X
 |};
 
 const getDefaultOverrides = <P>() : ParentDelegateOverrides<P> => {
@@ -157,8 +180,14 @@ const getDefaultOverrides = <P>() : ParentDelegateOverrides<P> => {
     return {};
 };
 
-export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, overrides? : ParentDelegateOverrides<P> = getDefaultOverrides(), parentWin : CrossDomainWindowType = window) : ParentComponent<P> {
-    const { propsDef, containerTemplate, prerenderTemplate, tag, name, attributes, dimensions, autoResize, url, domain: domainMatch, validate } = options;
+type ParentOptions<P, X> = {|
+    options : NormalizedComponentOptionsType<P, X>,
+    overrides? : ParentDelegateOverrides<P>,
+    parentWin? : CrossDomainWindowType
+|};
+
+export function parentComponent<P, X>({ options, overrides = getDefaultOverrides(), parentWin = window } : ParentOptions<P, X>) : ParentComponent<P, X> {
+    const { propsDef, containerTemplate, prerenderTemplate, tag, name, attributes, dimensions, autoResize, url, domain: domainMatch, validate, exports: xports } = options;
 
     const initPromise = new ZalgoPromise();
     const handledErrors = [];
@@ -168,7 +197,7 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
         visible: true
     };
     const event = overrides.event ? overrides.event : eventEmitter();
-    const props = overrides.props ? overrides.props : getDefaultProps();
+    const props : PropsType<P> = overrides.props ? overrides.props : getDefaultProps();
 
     let currentProxyWin : ?ProxyWindow;
     let currentProxyContainer : ?ProxyObject<HTMLElement>;
@@ -190,6 +219,26 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
     let watchForUnloadOverride : ?WatchForUnload = overrides.watchForUnload;
     const getInternalStateOverride : ?GetInternalState = overrides.getInternalState;
     const setInternalStateOverride : ?SetInternalState = overrides.setInternalState;
+
+    const resolveInitPromise = () => {
+        return ZalgoPromise.try(() => {
+            if (overrides.resolveInitPromise) {
+                return overrides.resolveInitPromise();
+            }
+
+            return initPromise.resolve();
+        });
+    };
+
+    const rejectInitPromise = (err : mixed) => {
+        return ZalgoPromise.try(() => {
+            if (overrides.rejectInitPromise) {
+                return overrides.rejectInitPromise(err);
+            }
+
+            return initPromise.reject(err);
+        });
+    };
 
     const getPropsForChild = (domain : string | RegExp) : ZalgoPromise<PropsType<P>> => {
         const result = {};
@@ -225,7 +274,7 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
             if (props && props.onError) {
                 return props.onError(err);
             } else {
-                return initPromise.reject(err).then(() => {
+                return rejectInitPromise(err).then(() => {
                     setTimeout(() => {
                         throw err;
                     }, 1);
@@ -412,7 +461,7 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
             if (context === CONTEXT.IFRAME && __ZOID__.__IFRAME_SUPPORT__) {
                 // $FlowFixMe
                 const attrs = {
-                    name:  `__zoid_prerender_frame__${ name }_${ uniqueID() }__`,
+                    name:  `__${ ZOID }_prerender_frame__${ name }_${ uniqueID() }__`,
                     title: `prerender__${ name }`,
                     ...getAttributes().iframe
                 };
@@ -495,7 +544,7 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
     const initChild = (childExports : ChildExportsType<P>) : ZalgoPromise<void> => {
         return ZalgoPromise.try(() => {
             childComponent = childExports;
-            initPromise.resolve();
+            resolveInitPromise();
             clean.register(() => childExports.close.fireAndForget().catch(noop));
         });
     };
@@ -506,28 +555,38 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
         });
     };
 
-    const destroy = (err? : mixed) : ZalgoPromise<void> => {
+    const destroy = (err : mixed) : ZalgoPromise<void> => {
         // eslint-disable-next-line promise/no-promise-in-callback
         return ZalgoPromise.try(() => {
             return event.trigger(EVENT.DESTROY);
         }).catch(noop).then(() => {
-            return clean.all();
+            return clean.all(err);
         }).then(() => {
             initPromise.asyncReject(err || new Error('Component destroyed'));
         });
     };
 
-    const close = () : ZalgoPromise<void> => {
-        if (closeOverride) {
-            return closeOverride();
-        }
-
+    const close = memoize((err? : mixed) : ZalgoPromise<void> => {
         return ZalgoPromise.try(() => {
-            return event.trigger(EVENT.CLOSE);
-        }).then(() => {
-            return destroy(new Error(`Window closed`));
+
+            if (closeOverride) {
+                // $FlowFixMe
+                const source = closeOverride.__source__;
+
+                if (isWindowClosed(source)) {
+                    return;
+                }
+
+                return closeOverride();
+            }
+
+            return ZalgoPromise.try(() => {
+                return event.trigger(EVENT.CLOSE);
+            }).then(() => {
+                return destroy(err || new Error(`Component closed`));
+            });
         });
-    };
+    });
 
     const open = (context : $Values<typeof CONTEXT>, { proxyWin, proxyFrame, windowName } : {| proxyWin : ProxyWindow, proxyFrame : ?ProxyObject<HTMLIFrameElement>, windowName : string |}) : ZalgoPromise<ProxyWindow> => {
         if (openOverride) {
@@ -542,12 +601,8 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
         
                 return proxyFrame.get().then(frame => {
                     return awaitFrameWindow(frame).then(win => {
-        
-                        const frameWatcher = watchElementForClose(frame, close);
-                        clean.register(() => frameWatcher.cancel());
                         clean.register(() => destroyElement(frame));
                         clean.register(() => cleanUpWindow(win));
-        
                         return win;
                     });
                 });
@@ -597,7 +652,7 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
         });
     };
 
-    const watchForClose = (proxyWin : ProxyWindow) : ZalgoPromise<void> => {
+    const watchForClose = (proxyWin : ProxyWindow, context : $Values<typeof CONTEXT>) : ZalgoPromise<void> => {
         let cancelled = false;
 
         clean.register(() => {
@@ -607,10 +662,12 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
         return ZalgoPromise.delay(2000).then(() => {
             return proxyWin.isClosed();
         }).then(isClosed => {
-            if (isClosed) {
-                return close();
-            } else if (!cancelled) {
-                return watchForClose(proxyWin);
+            if (!cancelled) {
+                if (isClosed) {
+                    return close(new Error(`Detected ${ context } close`));
+                } else {
+                    return watchForClose(proxyWin, context);
+                }
             }
         });
     };
@@ -621,7 +678,7 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
         return proxyWin.isClosed().then(isClosed => {
             if (isClosed) {
                 closed = true;
-                return close();
+                return close(new Error(`Detected component window close`));
             }
 
             return ZalgoPromise.delay(200)
@@ -629,7 +686,7 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
                 .then(secondIsClosed => {
                     if (secondIsClosed) {
                         closed = true;
-                        return close();
+                        return close(new Error(`Detected component window close`));
                     }
                 });
         }).then(() => {
@@ -654,11 +711,25 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
         });
     };
 
+    const exportsPromise : ZalgoPromise<X> = new ZalgoPromise();
+
+    const getExports = () : X => {
+        return xports({
+            getExports: () => exportsPromise
+        });
+    };
+
+    const resolveExports = (actualExports : X) : ZalgoPromise<void> => {
+        return ZalgoPromise.try(() => {
+            exportsPromise.resolve(actualExports);
+        });
+    };
+
     initChild.onError = onError;
 
-    const buildParentExports = (win : ProxyWindow) : ParentExportsType<P> => {
+    const buildParentExports = (win : ProxyWindow) : ParentExportsType<P, X> => {
         const checkClose = () => checkWindowClose(win);
-        return { init: initChild, close, checkClose, resize, onError, show, hide };
+        return { init: initChild, close, checkClose, resize, onError, show, hide, export: resolveExports };
     };
 
     const buildChildPayload = ({ proxyWin, childDomain, domain, target = window, context, uid } : {| proxyWin : ProxyWindow, childDomain : string, domain : string | RegExp, target : CrossDomainWindowType, context : $Values<typeof CONTEXT>, uid : string |} = {}) : ZalgoPromise<ChildPayload> => {
@@ -684,7 +755,6 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
     };
 
     const renderTemplate = (renderer : (RenderOptionsType<P>) => ?HTMLElement, { context, uid, container, doc, frame, prerenderFrame } : {| context : $Values<typeof CONTEXT>, uid : string, container? : HTMLElement, doc : Document, frame? : ?HTMLIFrameElement, prerenderFrame? : ?HTMLIFrameElement |}) : ?HTMLElement => {
-        // $FlowFixMe
         return renderer({
             container, context, uid, doc, frame, prerenderFrame,
             focus, close, state, props, tag, dimensions, event
@@ -737,12 +807,10 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
             }
         });
     };
-
-    const renderContainer : RenderContainer = (proxyContainer : ProxyObject<HTMLElement>, { proxyFrame, proxyPrerenderFrame, context, uid } :
-        {| context : $Values<typeof CONTEXT>, uid : string, proxyFrame : ?ProxyObject<HTMLIFrameElement>, proxyPrerenderFrame : ?ProxyObject<HTMLIFrameElement> |}) : ZalgoPromise<?ProxyObject<HTMLElement>> => {
+    const renderContainer : RenderContainer = (proxyContainer : ProxyObject<HTMLElement>, { proxyFrame, proxyPrerenderFrame, context, uid, rerender } : RenderContainerOptions) : ZalgoPromise<?ProxyObject<HTMLElement>> => {
 
         if (renderContainerOverride) {
-            return renderContainerOverride(proxyContainer, { proxyFrame, proxyPrerenderFrame, context, uid });
+            return renderContainerOverride(proxyContainer, { proxyFrame, proxyPrerenderFrame, context, uid, rerender });
         }
 
         return ZalgoPromise.hash({
@@ -759,6 +827,19 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
                     hideElement(innerContainer);
                 }
                 appendChild(container, innerContainer);
+                const containerWatcher = watchElementForClose(innerContainer, () => {
+                    const removeError = new Error(`Detected container element removed from DOM`);
+                    return ZalgoPromise.delay(1).then(() => {
+                        if (isElementClosed(innerContainer)) {
+                            close(removeError);
+                        } else {
+                            clean.all(removeError);
+                            return rerender().then(resolveInitPromise, rejectInitPromise);
+                        }
+                    });
+                });
+                
+                clean.register(() => containerWatcher.cancel());
                 clean.register(() => destroyElement(innerContainer));
                 currentProxyContainer = getProxyObject(innerContainer);
                 return currentProxyContainer;
@@ -847,14 +928,16 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
         }
 
         const childOverridesPromise = send(target, `${ POST_MESSAGE.DELEGATE }_${ name }`, {
-            overrides: { props: delegateProps, event, close, onError, getInternalState, setInternalState }
+            overrides: { props: delegateProps, event, close, onError, getInternalState, setInternalState, resolveInitPromise, rejectInitPromise }
         }).then(({ data: { parent } }) => {
-            clean.register(() => {
+            const parentComp : ParentComponent<P, X> = parent;
+
+            clean.register(err => {
                 if (!isWindowClosed(target)) {
-                    return parent.destroy();
+                    return parentComp.destroy(err);
                 }
             });
-            return parent.getDelegateOverrides();
+            return parentComp.getDelegateOverrides();
 
         }).catch(err => {
             throw new Error(`Unable to delegate rendering. Possibly the component is not loaded in the target window.\n\n${ stringifyError(err) }`);
@@ -913,7 +996,7 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
         setupEvents();
     };
 
-    const render = (target : CrossDomainWindowType, container : string | HTMLElement, context : $Values<typeof CONTEXT>) : ZalgoPromise<void> => {
+    const render = ({ target, container, context, rerender } : RenderOptions) : ZalgoPromise<void> => {
         return ZalgoPromise.try(() => {
             const uid = `${ ZOID }-${ tag }-${ uniqueID() }`;
             const domain = getDomainMatcher();
@@ -945,7 +1028,7 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
             const openPrerenderFramePromise = openPrerenderFrame(context);
 
             const renderContainerPromise = ZalgoPromise.hash({ proxyContainer: getProxyContainerPromise, proxyFrame: openFramePromise, proxyPrerenderFrame: openPrerenderFramePromise }).then(({ proxyContainer, proxyFrame, proxyPrerenderFrame }) => {
-                return renderContainer(proxyContainer, { context, uid, proxyFrame, proxyPrerenderFrame });
+                return renderContainer(proxyContainer, { context, uid, proxyFrame, proxyPrerenderFrame, rerender });
             }).then(proxyContainer => {
                 return proxyContainer;
             });
@@ -980,7 +1063,7 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
             });
 
             const watchForClosePromise = openPromise.then(proxyWin => {
-                watchForClose(proxyWin);
+                watchForClose(proxyWin, context);
             });
 
             const onDisplayPromise = ZalgoPromise.hash({ container: renderContainerPromise, prerender: prerenderPromise }).then(() => {
@@ -1023,6 +1106,7 @@ export function parentComponent<P>(options : NormalizedComponentOptionsType<P>, 
         destroy,
         setProps,
         getHelpers,
-        getDelegateOverrides
+        getDelegateOverrides,
+        getExports
     };
 }

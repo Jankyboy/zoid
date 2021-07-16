@@ -16,6 +16,7 @@ export type uidPropType = string;
 export type closePropType = () => ZalgoPromise<void>;
 export type focusPropType = () => ZalgoPromise<void>;
 export type showPropType = () => ZalgoPromise<void>;
+export type exportPropType<X> = (X) => ZalgoPromise<void>;
 export type hidePropType = () => ZalgoPromise<void>;
 export type resizePropType = ({| width : ?number, height : ?number |}) => ZalgoPromise<void>;
 export type getParentPropType = () => CrossDomainWindowType;
@@ -31,11 +32,10 @@ export type onFocusPropType = EventHandlerType<void>;
 export type onErrorPropType = EventHandlerType<mixed>;
 export type onPropsPropType<P> = ((PropsType<P>) => void) => void; // eslint-disable-line no-use-before-define
 
-// eslint-disable-next-line flowtype/require-exact-type
-export type PropsInputType<P> = {
+export type PropsInputType<P> = {|
     timeout? : timeoutPropType,
     window? : windowPropType,
-    cspNonce? : cspNoncePropType,
+    cspNonce? : ?cspNoncePropType,
 
     onDisplay? : onDisplayPropType,
     onRendered? : onRenderedPropType,
@@ -45,11 +45,12 @@ export type PropsInputType<P> = {
     onResize? : onResizePropType,
     onFocus? : onFocusPropType,
     onError? : onErrorPropType,
-    onProps? : onPropsPropType<P>
-} & P;
+    onProps? : onPropsPropType<P>,
 
-// eslint-disable-next-line flowtype/require-exact-type
-export type PropsType<P> = {
+    ...P
+|};
+
+export type PropsType<P> = {|
     timeout? : timeoutPropType,
     window? : ?windowPropType,
     close? : ?closePropType,
@@ -66,10 +67,12 @@ export type PropsType<P> = {
     onResize : onResizePropType,
     onFocus : onFocusPropType,
     onError : onErrorPropType,
-    onProps : onPropsPropType<P>
-} & P;
+    onProps : onPropsPropType<P>,
+    
+    ...P
+|};
 
-type PropDefinitionType<T, P, S : string> = {|
+export type PropDefinitionType<T, P, S : string, X> = {|
     type : S,
     alias? : string,
     value? : ({|
@@ -108,64 +111,74 @@ type PropDefinitionType<T, P, S : string> = {|
         getParentDomain : () => string,
         getParent : () => CrossDomainWindowType,
         show : () => ZalgoPromise<void>,
-        hide : () => ZalgoPromise<void>
+        hide : () => ZalgoPromise<void>,
+        export : (X) => ZalgoPromise<void>
     |}) => ?T,
     required? : boolean,
     queryParam? : boolean | string | ({| value : T |}) => (string | ZalgoPromise<string>),
-    queryValue? : ({| value : T |}) => (ZalgoPromise<string> | string),
+    // eslint-disable-next-line no-undef
+    queryValue? : <R>({| value : T |}) => (ZalgoPromise<R> | R | string),
     sendToChild? : boolean,
     allowDelegate? : boolean,
-    validate? : ({| value : T, props : PropsInputType<P> |}) => void,
+    validate? : ({| value : T, props : PropsType<P> |}) => void,
     sameDomain? : boolean,
     serialization? : $Values<typeof PROP_SERIALIZATION>
 |};
 
-export type BooleanPropDefinitionType<T : boolean, P> = PropDefinitionType<T, P, 'boolean'>;
-export type StringPropDefinitionType<T : string, P> = PropDefinitionType<T, P, 'string'>;
-export type NumberPropDefinitionType<T : number, P> = PropDefinitionType<T, P, 'number'>;
-export type FunctionPropDefinitionType<T : Function, P> = PropDefinitionType<T, P, 'function'>;
-export type ArrayPropDefinitionType<T : Array<*> | $ReadOnlyArray<*>, P> = PropDefinitionType<T, P, 'array'>; // eslint-disable-line flowtype/no-mutable-array
-export type ObjectPropDefinitionType<T : Object, P> = PropDefinitionType<T, P, 'object'>;
+export type BooleanPropDefinitionType<T : boolean, P, X> = PropDefinitionType<T, P, 'boolean', X>;
+export type StringPropDefinitionType<T : string, P, X> = PropDefinitionType<T, P, 'string', X>;
+export type NumberPropDefinitionType<T : number, P, X> = PropDefinitionType<T, P, 'number', X>;
+export type FunctionPropDefinitionType<T : Function, P, X> = PropDefinitionType<T, P, 'function', X>;
+export type ArrayPropDefinitionType<T : Array<*> | $ReadOnlyArray<*>, P, X> = PropDefinitionType<T, P, 'array', X>; // eslint-disable-line flowtype/no-mutable-array
+export type ObjectPropDefinitionType<T : Object, P, X> = PropDefinitionType<T, P, 'object', X>;
 
-export type MixedPropDefinitionType<P> = BooleanPropDefinitionType<*, P> | StringPropDefinitionType<*, P> | NumberPropDefinitionType<*, P> | FunctionPropDefinitionType<*, P> | ObjectPropDefinitionType<*, P> | ArrayPropDefinitionType<*, P>;
+export type MixedPropDefinitionType<P, X> =
+    BooleanPropDefinitionType<*, P, X> |
+    StringPropDefinitionType<*, P, X> |
+    NumberPropDefinitionType<*, P, X> |
+    FunctionPropDefinitionType<*, P, X> |
+    ObjectPropDefinitionType<*, P, X> |
+    ArrayPropDefinitionType<*, P, X>;
 
-export type UserPropsDefinitionType<P> = {
-    [string] : MixedPropDefinitionType<P>
-};
-
-export type BuiltInPropsDefinitionType<P> = {|
-    timeout : NumberPropDefinitionType<timeoutPropType, P>,
-    window : ObjectPropDefinitionType<windowPropType, P>,
-    close : FunctionPropDefinitionType<closePropType, P>,
-    focus : FunctionPropDefinitionType<focusPropType, P>,
-    resize : FunctionPropDefinitionType<resizePropType, P>,
-    uid : StringPropDefinitionType<uidPropType, P>,
-    cspNonce : StringPropDefinitionType<cspNoncePropType, P>,
-    getParent : FunctionPropDefinitionType<getParentPropType, P>,
-    getParentDomain : FunctionPropDefinitionType<getParentDomainPropType, P>,
-    hide : FunctionPropDefinitionType<hidePropType, P>,
-    show : FunctionPropDefinitionType<showPropType, P>,
-
-    onDisplay : FunctionPropDefinitionType<onDisplayPropType, P>,
-    onRendered : FunctionPropDefinitionType<onRenderedPropType, P>,
-    onRender : FunctionPropDefinitionType<onRenderPropType, P>,
-    onClose : FunctionPropDefinitionType<onClosePropType, P>,
-    onDestroy : FunctionPropDefinitionType<onDestroyPropType, P>,
-    onResize : FunctionPropDefinitionType<onClosePropType, P>,
-    onFocus : FunctionPropDefinitionType<onFocusPropType, P>,
-    onError : FunctionPropDefinitionType<onErrorPropType, P>,
-    onProps : FunctionPropDefinitionType<onPropsPropType<P>, P>
+export type UserPropsDefinitionType<P, X> = {|
+    [string] : MixedPropDefinitionType<P, X>
 |};
 
-export type PropsDefinitionType<P> = {|
-    ...BuiltInPropsDefinitionType<P>,
-    [ string ] : MixedPropDefinitionType<P>
+export type BuiltInPropsDefinitionType<P, X> = {|
+    timeout : NumberPropDefinitionType<timeoutPropType, P, X>,
+    window : ObjectPropDefinitionType<windowPropType, P, X>,
+    close : FunctionPropDefinitionType<closePropType, P, X>,
+    focus : FunctionPropDefinitionType<focusPropType, P, X>,
+    resize : FunctionPropDefinitionType<resizePropType, P, X>,
+    uid : StringPropDefinitionType<uidPropType, P, X>,
+    cspNonce : StringPropDefinitionType<cspNoncePropType, P, X>,
+    getParent : FunctionPropDefinitionType<getParentPropType, P, X>,
+    getParentDomain : FunctionPropDefinitionType<getParentDomainPropType, P, X>,
+    hide : FunctionPropDefinitionType<hidePropType, P, X>,
+    show : FunctionPropDefinitionType<showPropType, P, X>,
+    export : FunctionPropDefinitionType<exportPropType<X>, P, X>,
+
+    onDisplay : FunctionPropDefinitionType<onDisplayPropType, P, X>,
+    onRendered : FunctionPropDefinitionType<onRenderedPropType, P, X>,
+    onRender : FunctionPropDefinitionType<onRenderPropType, P, X>,
+    onClose : FunctionPropDefinitionType<onClosePropType, P, X>,
+    onDestroy : FunctionPropDefinitionType<onDestroyPropType, P, X>,
+    onResize : FunctionPropDefinitionType<onClosePropType, P, X>,
+    onFocus : FunctionPropDefinitionType<onFocusPropType, P, X>,
+    onError : FunctionPropDefinitionType<onErrorPropType, P, X>,
+    onProps : FunctionPropDefinitionType<onPropsPropType<P>, P, X>
+|};
+
+export type PropsDefinitionType<P, X> = {|
+    ...BuiltInPropsDefinitionType<P, X>,
+    [ string ] : MixedPropDefinitionType<P, X>
 |};
 
 const defaultNoop = () => noop;
-const decorateOnce = ({ value }) => once(value);
+// eslint-disable-next-line flowtype/require-exact-type
+const decorateOnce = <F : Function>({ value } : { value : F }) : F => once(value);
 
-export function getBuiltInProps<P>() : BuiltInPropsDefinitionType<P> {
+export function getBuiltInProps<P, X>() : BuiltInPropsDefinitionType<P, X> {
     return {
         window: {
             type:          'object',
@@ -261,6 +274,13 @@ export function getBuiltInProps<P>() : BuiltInPropsDefinitionType<P> {
             childDecorate: ({ hide }) => hide
         },
 
+        export: {
+            type:          'function',
+            required:      false,
+            sendToChild:   false,
+            childDecorate: ({ 'export': xport }) => xport
+        },
+
         onDisplay: {
             type:          'function',
             required:      false,
@@ -335,4 +355,37 @@ export function getBuiltInProps<P>() : BuiltInPropsDefinitionType<P> {
             childDecorate: ({ onProps }) => onProps
         }
     };
+}
+
+type PropCallback<P, X, R> =
+    ((string, BooleanPropDefinitionType<boolean, P, X>, boolean) => R) &
+    ((string, StringPropDefinitionType<string, P, X>, string) => R) &
+    ((string, NumberPropDefinitionType<number, P, X>, number) => R) &
+    ((string, FunctionPropDefinitionType<Function, P, X>, Function) => R) &
+    ((string, ArrayPropDefinitionType<$ReadOnlyArray<*> | $ReadOnlyArray<*>, P, X>, $ReadOnlyArray<*> | $ReadOnlyArray<*>) => R) &
+    ((string, ObjectPropDefinitionType<Object, P, X>, Object) => R);
+
+export function eachProp<P, X>(props : PropsType<P>, propsDef : PropsDefinitionType<P, X>, handler : PropCallback<P, X, void>) {
+    for (const key of Object.keys(props)) {
+        const propDef = propsDef[key];
+        const value = props[key];
+
+        if (!propDef) {
+            continue;
+        }
+
+        // $FlowFixMe[incompatible-call]
+        handler(key, propDef, value);
+    }
+}
+
+export function mapProps<P, X, T>(props : PropsType<P>, propsDef : PropsDefinitionType<P, X>, handler : PropCallback<P, X, T>) : $ReadOnlyArray<T> {
+    const results = [];
+
+    eachProp(props, propsDef, (key, propDef, value) => {
+        // $FlowFixMe[incompatible-call]
+        const result = handler(key, propDef, value);
+        results.push(result);
+    });
+    return results;
 }

@@ -6,7 +6,8 @@ import { onCloseWindow, getParent, getOpener, isWindowClosed } from 'cross-domai
 import { wrapPromise, destroyElement } from 'belter/src';
 import { node, dom } from 'jsx-pragmatic/src';
 
-import { onWindowOpen, getContainer } from '../common';
+import { onWindowOpen, getContainer, getBody } from '../common';
+import { zoid } from '../zoid';
 
 describe('zoid renderto cases', () => {
 
@@ -15,13 +16,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-iframe-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-iframe-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -49,7 +50,7 @@ describe('zoid renderto cases', () => {
                         }).renderTo(window.parent, 'body');
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -58,13 +59,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-popup-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-popup-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -78,7 +79,9 @@ describe('zoid renderto cases', () => {
                 runOnClick: true,
 
                 run() : string {
+                    // $FlowFixMe[object-this-reference]
                     onWindowOpen({ win: this.source }).then(expect('onWindowOpen', ({ win }) => {
+                        // $FlowFixMe[object-this-reference]
                         if (getOpener(win) !== this.source) {
                             throw new Error(`Expected window opener to be child frame`);
                         }
@@ -93,10 +96,10 @@ describe('zoid renderto cases', () => {
                             \`
                         });
                         
-                        return instance.renderTo(window.parent, 'body', window.zoid.CONTEXT.POPUP);
+                        return instance.renderTo(window.parent, 'body', zoid.CONTEXT.POPUP);
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -104,13 +107,13 @@ describe('zoid renderto cases', () => {
         return wrapPromise(({ expect }) => {
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-prerender-popup-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:               'test-renderto-prerender-popup-remote',
                         url:               '/base/test/windows/child/index.htm',
                         domain:            'mock://www.child.com',
@@ -147,7 +150,7 @@ describe('zoid renderto cases', () => {
                         }).renderTo(window.parent, 'body', zoid.CONTEXT.POPUP);
                     `;
                 })
-            }).render(document.body);
+            }).render(getBody());
         }, { timeout: 5000 });
     });
 
@@ -155,13 +158,13 @@ describe('zoid renderto cases', () => {
         return wrapPromise(({ expect }) => {
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-prerender-iframe-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:               'test-renderto-prerender-iframe-remote',
                         url:               '/base/test/windows/child/index.htm',
                         domain:            'mock://www.child.com',
@@ -194,7 +197,7 @@ describe('zoid renderto cases', () => {
                         }).renderTo(window.parent, 'body');
                     `;
                 })
-            }).render(document.body);
+            }).render(getBody());
         }, { timeout: 5000 });
     });
 
@@ -203,13 +206,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-close-iframe-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-close-iframe-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -247,7 +250,7 @@ describe('zoid renderto cases', () => {
                         }).renderTo(window.parent, 'body');
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         }, { timeout: 5000 });
     });
 
@@ -256,13 +259,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-close-popup-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-close-popup-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -282,6 +285,7 @@ describe('zoid renderto cases', () => {
                 runOnClick: true,
 
                 run() : string {
+                    // $FlowFixMe[object-this-reference]
                     onWindowOpen({ win: this.source }).then(expect('onWindowOpen', ({ win }) => {
                         componentWindow = win;
                     }));
@@ -302,7 +306,7 @@ describe('zoid renderto cases', () => {
                         }).renderTo(window.parent, 'body', zoid.CONTEXT.POPUP);
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         }, { timeout: 5000 });
     });
 
@@ -311,19 +315,19 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-prerender-close-iframe-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:               'test-renderto-prerender-close-iframe-remote',
                         url:               '/base/test/windows/child/index.htm',
                         domain:            'mock://www.child.com',
-                        prerenderTemplate: ({ close }) => {
-                            const html = document.createElement('html');
-                            const body = document.createElement('body');
+                        prerenderTemplate: ({ close, doc }) => {
+                            const html = doc.createElement('html');
+                            const body = doc.createElement('body');
                             html.appendChild(body);
                             setTimeout(close, 300);
                             return html;
@@ -342,7 +346,7 @@ describe('zoid renderto cases', () => {
                         window.__component__().remote().renderTo(window.parent, 'body');
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         }, { timeout: 5000 });
     });
 
@@ -351,19 +355,19 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-prerender-close-popup-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:               'test-renderto-prerender-close-popup-remote',
                         url:               '/base/test/windows/child/index.htm',
                         domain:            'mock://www.child.com',
-                        prerenderTemplate: ({ close }) => {
-                            const html = document.createElement('html');
-                            const body = document.createElement('body');
+                        prerenderTemplate: ({ close, doc }) => {
+                            const html = doc.createElement('html');
+                            const body = doc.createElement('body');
                             html.appendChild(body);
                             setTimeout(close, 300);
                             return html;
@@ -384,7 +388,7 @@ describe('zoid renderto cases', () => {
                         window.__component__().remote().renderTo(window.parent, 'body', zoid.CONTEXT.POPUP);
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         }, { timeout: 5000 });
     });
 
@@ -394,13 +398,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-container-focus-popup-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:               'test-renderto-container-focus-popup-remote',
                         url:               '/base/test/windows/child/index.htm',
                         domain:            'mock://www.child.com',
@@ -437,7 +441,7 @@ describe('zoid renderto cases', () => {
                         });
                     `;
                 })
-            }).render(document.body);
+            }).render(getBody());
         }, { timeout: 5000 });
     });
 
@@ -445,13 +449,13 @@ describe('zoid renderto cases', () => {
         return wrapPromise(({ expect }) => {
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-prerender-focus-popup-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:               'test-renderto-prerender-focus-popup-remote',
                         url:               '/base/test/windows/child/index.htm',
                         domain:            'mock://www.child.com',
@@ -487,7 +491,7 @@ describe('zoid renderto cases', () => {
                         });
                     `;
                 })
-            }).render(document.body);
+            }).render(getBody());
         }, { timeout: 5000 });
     });
 
@@ -496,13 +500,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-element-reference-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-element-reference-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -519,7 +523,7 @@ describe('zoid renderto cases', () => {
                             .catch(window.xprops.childRenderError);
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -528,13 +532,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-different-popup-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-different-popup-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.foobar.com'
@@ -556,7 +560,7 @@ describe('zoid renderto cases', () => {
                             });
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -565,13 +569,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-iframe-different-domain-error-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-iframe-different-domain-error-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.foobar.com'
@@ -588,7 +592,7 @@ describe('zoid renderto cases', () => {
                             .catch(window.xprops.childRenderError);
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -597,7 +601,7 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-iframe-bad-window-error-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -610,7 +614,7 @@ describe('zoid renderto cases', () => {
 
                 run: () => {
                     return `
-                        const remoteComponent = window.zoid.create({
+                        const remoteComponent = zoid.create({
                             tag:    'test-renderto-iframe-bad-window-error-remote',
                             url:    'mock://www.child.com/base/test/windows/child/index.htm',
                             domain: 'mock://www.child.com'
@@ -620,7 +624,7 @@ describe('zoid renderto cases', () => {
                             .catch(window.xprops.childRenderError);
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -629,13 +633,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-close-on-parent-close-iframe-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-close-on-parent-close-iframe-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -676,7 +680,7 @@ describe('zoid renderto cases', () => {
                         });
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         }, { timeout: 5000 });
     });
 
@@ -685,13 +689,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-canrenderto-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-canrenderto-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -712,7 +716,7 @@ describe('zoid renderto cases', () => {
                             .then(window.xprops.canRenderToResult)
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -721,7 +725,7 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-canrenderto-negative-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -738,7 +742,7 @@ describe('zoid renderto cases', () => {
 
                 run: () => {
                     return `
-                        const component = window.zoid.create({
+                        const component = zoid.create({
                             tag:    'test-renderto-canrenderto-negative-remote',
                             url:    'mock://www.child.com/base/test/windows/child/index.htm',
                             domain: 'mock://www.child.com'
@@ -748,7 +752,7 @@ describe('zoid renderto cases', () => {
                             .then(window.xprops.canRenderToResult)
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -757,13 +761,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-iframe-in-iframe-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:               'test-renderto-iframe-in-iframe-remote',
                         url:               'mock://www.child.com/base/test/windows/child/index.htm',
                         domain:            'mock://www.child.com',
@@ -799,7 +803,7 @@ describe('zoid renderto cases', () => {
                         }).renderTo(window.parent, 'body');
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -808,13 +812,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-iframe-required-prop-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-iframe-required-prop-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com',
@@ -848,7 +852,7 @@ describe('zoid renderto cases', () => {
                         }).renderTo(window.parent, 'body');
                     `;
                 }
-            }).render(document.body);
+            }).render(getBody());
         });
     });
 
@@ -857,13 +861,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-popup-shadow-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-popup-shadow-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -885,7 +889,9 @@ describe('zoid renderto cases', () => {
                 runOnClick: true,
 
                 run() : string {
+                    // $FlowFixMe[object-this-reference]
                     onWindowOpen({ win: this.source }).then(expect('onWindowOpen', ({ win }) => {
+                        // $FlowFixMe[object-this-reference]
                         if (getOpener(win) !== this.source) {
                             throw new Error(`Expected window opener to be child frame`);
                         }
@@ -901,7 +907,7 @@ describe('zoid renderto cases', () => {
                             \`
                         });
                         
-                        return instance.renderTo(window.parent, 'body', window.zoid.CONTEXT.POPUP);
+                        return instance.renderTo(window.parent, 'body', zoid.CONTEXT.POPUP);
                     `;
                 }
             }).render(container);
@@ -913,13 +919,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-iframe-shadow-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-iframe-shadow-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -957,7 +963,7 @@ describe('zoid renderto cases', () => {
                             \`
                         });
                         
-                        return instance.renderTo(window.parent, 'body', window.zoid.CONTEXT.IFRAME);
+                        return instance.renderTo(window.parent, 'body', zoid.CONTEXT.IFRAME);
                     `;
                 }
             }).render(container);
@@ -969,13 +975,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-popup-shadow-slots-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-popup-shadow-slots-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -997,7 +1003,9 @@ describe('zoid renderto cases', () => {
                 runOnClick: true,
 
                 run() : string {
+                    // $FlowFixMe[object-this-reference]
                     onWindowOpen({ win: this.source }).then(expect('onWindowOpen', ({ win }) => {
+                        // $FlowFixMe[object-this-reference]
                         if (getOpener(win) !== this.source) {
                             throw new Error(`Expected window opener to be child frame`);
                         }
@@ -1013,7 +1021,7 @@ describe('zoid renderto cases', () => {
                             \`
                         });
                         
-                        return instance.renderTo(window.parent, 'body', window.zoid.CONTEXT.POPUP);
+                        return instance.renderTo(window.parent, 'body', zoid.CONTEXT.POPUP);
                     `;
                 }
             }).render(container);
@@ -1025,13 +1033,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-iframe-shadow-slots-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-iframe-shadow-slots-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -1069,7 +1077,7 @@ describe('zoid renderto cases', () => {
                             \`
                         });
                         
-                        return instance.renderTo(window.parent, 'body', window.zoid.CONTEXT.IFRAME);
+                        return instance.renderTo(window.parent, 'body', zoid.CONTEXT.IFRAME);
                     `;
                 }
             }).render(container);
@@ -1081,13 +1089,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-iframe-showhide-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-iframe-showhide-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -1161,7 +1169,7 @@ describe('zoid renderto cases', () => {
                 }
             });
             
-            return instance.render(document.body);
+            return instance.render(getBody());
         });
     });
 
@@ -1170,13 +1178,13 @@ describe('zoid renderto cases', () => {
 
             window.__component__ = () => {
                 return {
-                    simple: window.zoid.create({
+                    simple: zoid.create({
                         tag:    'test-renderto-iframe-hide-before-render-simple',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
                     }),
 
-                    remote: window.zoid.create({
+                    remote: zoid.create({
                         tag:    'test-renderto-iframe-hide-before-render-remote',
                         url:    'mock://www.child.com/base/test/windows/child/index.htm',
                         domain: 'mock://www.child.com'
@@ -1235,7 +1243,7 @@ describe('zoid renderto cases', () => {
                 }
             });
             
-            return instance.render(document.body);
+            return instance.render(getBody());
         });
     });
 });

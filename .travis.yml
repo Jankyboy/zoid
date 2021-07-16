@@ -1,4 +1,9 @@
 language: node_js
 node_js:
-   - "lts/*"
+  - 'lts/*'
+before_install:
+  - rm -rf node_modules
+  - npm install -g codecov
 script: npm test
+after_success:
+  - codecov
